@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	client "github.com/coreos/etcd/clientv3"
+	"go-scheduler/pkg/init/database"
 	"go-scheduler/pkg/scheduler/registry"
 	"go-scheduler/pkg/web/conf"
+	"go-scheduler/pkg/web/model"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
@@ -52,9 +55,29 @@ func startInitConfigFile() {
 		}
 	}
 
-	if err := util.CreateDatabase(); err != nil {
+	if err := database.CreateDatabase(); err != nil {
 		log.Fatal("Failed to create database", err)
 	}
+
+	if model.Engine == nil {
+		model.Engine, err = model.Connection()
+		if err != nil {
+			log.Fatal("Failed to connect database", conf.Conf.Database.Name, ";", err)
+		}
+	}
+
+	if err := model.Migrate(); err != nil {
+		log.Fatal("Failed to migrate table", err)
+	}
+
+	password, err := model.GeneratePassword(user.Password)
+	user.Password = string(password)
+
+	if _, err := model.Engine.Insert(user); err != nil {
+		log.Fatal("Failed to create system manager", err)
+	}
+
+	log.Println("INITIALIZE SUCCESSFUL")
 }
 
 func validateUserParams() {
@@ -75,4 +98,3 @@ func validateFilePath() {
 	}
 
 }
-
