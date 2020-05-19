@@ -69,10 +69,8 @@ func startInitConfigFile() {
 	if err := model.Migrate(); err != nil {
 		log.Fatal("Failed to migrate table", err)
 	}
-
 	password, err := model.GeneratePassword(user.Password)
 	user.Password = string(password)
-
 	if _, err := model.Engine.Insert(user); err != nil {
 		log.Fatal("Failed to create system manager", err)
 	}
